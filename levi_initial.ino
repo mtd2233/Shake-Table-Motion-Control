@@ -2,7 +2,7 @@
 
 #include <AccelStepper.h>
 
-Accel Steeper stepper(1, 6, 5);
+Accelstepper stepper(1, 6, 5);
 
 // --- ADJUSTABLE PARAMETERS ---
 float currentMaxSpeed = 200.0;
