@@ -18,6 +18,22 @@ bool motionComplete = false;
 String serialCommand = "";
 bool commandComplete = false;
 
+// Function prototypes (declare all functions before they're used)
+void processSerialCommands();
+void parseCommand(String cmd);
+void runNormalMotion();
+// void runUltraSlowMotion();
+// void parseUltraSlowCommand(String cmd);
+void setTargetPosition(long position);
+void setSpeed(int speed);
+void setAcceleration(int acceleration);
+// void setupUltraSlowMotion(long steps, unsigned long intervalMs, int direction);
+void emergencyStop();
+
+void checkLimitSwitches();
+void printStatus();
+void printHelp();
+
 void setup() {
   Serial.begin(9600);
 
