@@ -2,7 +2,9 @@
 
 #include <AccelStepper.h>
 
-Accelstepper stepper(1, 6, 5);
+AccelStepper stepper(1, 6, 5);
+
+#define ENABLE_PIN 7
 
 // Motion control variables
 long  targetPosition = 0;
@@ -72,132 +74,132 @@ if (jmotorEnabled) {
 }
 
 void processSerialCommands() {
-while (Serial.available()) {
-char inChar = (char)Serial.read();
+  while (Serial.available()) {
+    char inChar = (char)Serial.read();
 
-if (inChar == '\n') {
-    commandComplete = true;
-} else {
-    serialCommand += inChar;
-}
-}
+    if (inChar == '\n') {
+        commandComplete = true;
+    } else {
+        serialCommand += inChar;
+    }
+  }
 
-if (commandComplete) {
-parseCommand(serialCommand);
-serialCommand = "";
-commandComplete = false;
-}
+  if (commandComplete) {
+    parseCommand(serialCommand);
+    serialCommand = "";
+    commandComplete = false;
+  }
 }
 
 // Implementation of Serial Cmds
 
 void parseCommand(String cmd) {
-cmd.trim();
-cmd.toLowerCase();
+  cmd.trim();
+  cmd.toLowerCase();
 
-if (cmd.startsWith("move ")) {
-// Format: move 3200
-long pos = cmd.substring(5).toInt();
-setTargetPosition(pos);
-}
-else if (cmd.startsWith("speed ")) {
-// Format: speed 2000
-int spd = cmd.substring(6).toInt();
-setSpeed(spd);
-}
-else if (cmd.startsWith("accel ")) {
-// Format: accel 800
-int acc = cmd.substring(6).toInt();
-setAcceleration(acc);
-}
-else if (cmd == "stop") {
-emergencyStop();
-}
-else if (cmd == "home") {
-homeSequence();
-}
-else if (cmd == "enable") {
-motorEnabled = true;
-stepper.enableOutputs();
-Serial.println("Motor enabled");
-}
-else if (cmd == "disable") {
-motorEnabled = false;
-stepper.disableOutputs();
-Serial.println("Motor disabled");
-}
-else if (cmd.startsWith("ultra ")) {
-// Format: ultra steps interval_ms direction
-// ultra 200 18000 1  (200 steps, 18 sec interval, forward)
-parseUltraSlowCommand(cmd);
-}
-else if (cmd == "help") {
-printHelp();
-}
-else {
-Serial.println("Unknown command. Type 'help' for options");
-}
+  if (cmd.startsWith("move ")) {
+  // Format: move 3200
+  long pos = cmd.substring(5).toInt();
+  setTargetPosition(pos);
+  }
+  else if (cmd.startsWith("speed ")) {
+  // Format: speed 2000
+  int spd = cmd.substring(6).toInt();
+  setSpeed(spd);
+  }
+  else if (cmd.startsWith("accel ")) {
+  // Format: accel 800
+  int acc = cmd.substring(6).toInt();
+  setAcceleration(acc);
+  }
+  else if (cmd == "stop") {
+  emergencyStop();
+  }
+  else if (cmd == "home") {
+  homeSequence();
+  }
+  else if (cmd == "enable") {
+  motorEnabled = true;
+  stepper.enableOutputs();
+  Serial.println("Motor enabled");
+  }
+  else if (cmd == "disable") {
+  motorEnabled = false;
+  stepper.disableOutputs();
+  Serial.println("Motor disabled");
+  }
+  else if (cmd.startsWith("ultra ")) {
+  // Format: ultra steps interval_ms direction
+  // ultra 200 18000 1  (200 steps, 18 sec interval, forward)
+  parseUltraSlowCommand(cmd);
+  }
+  else if (cmd == "help") {
+  printHelp();
+  }
+  else {
+  Serial.println("Unknown command. Type 'help' for options");
+  }
 }
 
 void setTargetPosition(long position) {
-targetPosition = position;
-stepper.moveTo(position);
-motionComplete = false;
-ultraSlowMode = false; // Exit ultra-slow mode if active
-Serial.print("Moving to position: ");
+  targetPosition = position;
+  stepper.moveTo(position);
+  motionComplete = false;
+  ultraSlowMode = false; // Exit ultra-slow mode if active
+  Serial.print("Moving to position: ");
 Serial.println(position);
 }
 
 void setSpeed(int speed) {
-currentSpeed = speed;
-stepper.setMaxSpeed(speed);
-Serial.print("Max speed set to: ");
-Serial.print(speed);
-Serial.println(" steps/sec");
+  currentSpeed = speed;
+  stepper.setMaxSpeed(speed);
+  Serial.print("Max speed set to: ");
+  Serial.print(speed);
+  Serial.println(" steps/sec");
 }
 
 void setAcceleration(int acceleration) {
-currentAcceleration = acceleration;
-stepper.setAcceleration(acceleration);
-Serial.print("Acceleration set to: ");
-Serial.print(acceleration);
-Serial.println(" steps/sec²");
+  currentAcceleration = acceleration;
+  stepper.setAcceleration(acceleration);
+  Serial.print("Acceleration set to: ");
+  Serial.print(acceleration);
+  Serial.println(" steps/sec²");
 }
 
 void emergencyStop() {
-stepper.stop();
-stepper.disableOutputs();
-motorEnabled = false;
-ultraSlowMode = false;
-Serial.println("EMERGENCY STOP - Motor disabled");
+  stepper.stop();
+  stepper.disableOutputs();
+  motorEnabled = false;
+  ultraSlowMode = false;
+  Serial.println("EMERGENCY STOP - Motor disabled");
 }
 
 void checkLimitSwitches() {
-// Add limit switch checking logic here
-/*
-if (digitalRead(LIMIT_SWITCH_PIN) == LOW) {
-emergencyStop();
-Serial.println("Limit switch triggered - Stopped");
-}
-*/
+  // Add limit switch checking logic here
+  /*
+  if (digitalRead(LIMIT_SWITCH_PIN) == LOW) {
+  emergencyStop();
+  Serial.println("Limit switch triggered - Stopped");
+  }
+  */
 }
 
 void printStatus() {
-Serial.println("--- Status ---");
-Serial.print("Current Position: ");
-Serial.println(stepper.currentPosition());
-Serial.print("Target Position: ");
-Serial.println(targetPosition);
-Serial.print("Speed: ");
-Serial.print(currentSpeed);
-Serial.print(" steps/s, Accel: ");
-Serial.print(currentAcceleration);
-Serial.println(" steps/s²");
-Serial.print("Motor Enabled: ");
-Serial.println(motorEnabled ? "Yes" : "No");
-Serial.print("Mode: ");
-Serial.println(ultraSlowMode ? "Ultra-slow" : "Normal");
-Serial.println("-------------");
+  Serial.println("--- Status ---");
+  Serial.print("Current Position: ");
+  Serial.println(stepper.currentPosition());
+  Serial.print("Target Position: ");
+  Serial.println(targetPosition);
+  Serial.print("Speed: ");
+  Serial.print(currentSpeed);
+  Serial.print(" steps/s, Accel: ");
+  Serial.print(currentAcceleration);
+  Serial.println(" steps/s²");
+  Serial.print("Motor Enabled: ");
+  Serial.println(motorEnabled ? "Yes" : "No");
+  Serial.print("Mode: ");
+  Serial.println(ultraSlowMode ? "Ultra-slow" : "Normal");
+  Serial.println("-------------");
 }
 
 void printHelp() {
@@ -212,4 +214,4 @@ void printHelp() {
   Serial.println("  ultra [steps] [interval_ms] [dir] - Ultra-slow mode");
   Serial.println("  help             - Show this help");
 }
-
+}

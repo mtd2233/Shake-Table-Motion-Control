@@ -2,7 +2,7 @@
 
 #include <AccelStepper.h>
 
-Accelstepper stepper(1, 6, 5);
+AccelStepper stepper(1, 6, 5);
 
 void setup() {
   Serial.begin(9600);
