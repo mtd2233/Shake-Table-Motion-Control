@@ -8,8 +8,8 @@ AccelStepper stepper(1, 6, 5);
 
 // Motion control variables
 long  targetPosition = 0;
-const float cuurentSpeed = 1000;
-const float currentAcceleration = 800;
+float currentSpeed = 1000;
+float currentAcceleration = 800;
 const float abs_MAX = 4000;
 bool motorEnabled = true;
 bool motionComplete = false;
@@ -67,24 +67,25 @@ void loop() {
   processSerialCommands();
 
   // Different Motion Modes
-  if (ultraSlowMode) {
-      runUltraSlowMode();
-  } else {
-      runNormalMotion();
-  }
+  runNormalMotion();
+  //if (ultraSlowMode) {
+  //    runUltraSlowMode();
+  //} else {
+  //    runNormalMotion();
+}
 
 
   // Check limit switches if enabled
   // checkLimitSwitches();
 
 void runNormalMotion() {
-if (jmotorEnabled) {
-    stepper.run();
+    if (motorEnabled) {
+        stepper.run();
 
     // Check if motion completed and report
     if (stepper.distanceToGo() == 0 && !motionComplete) {
         motionComplete = true;
-        Serial.println("Target position reached"):
+        Serial.println("Target position reached");
     }
 }
 }
@@ -132,7 +133,7 @@ void parseCommand(String cmd) {
   emergencyStop();
   }
   else if (cmd == "home") {
-  homeSequence();
+  //homeSequence();
   }
   else if (cmd == "enable") {
   motorEnabled = true;
@@ -144,11 +145,11 @@ void parseCommand(String cmd) {
   stepper.disableOutputs();
   Serial.println("Motor disabled");
   }
-  else if (cmd.startsWith("ultra ")) {
+  //else if (cmd.startsWith("ultra ")) {
   // Format: ultra steps interval_ms direction
   // ultra 200 18000 1  (200 steps, 18 sec interval, forward)
-  parseUltraSlowCommand(cmd);
-  }
+  //parseUltraSlowCommand(cmd);
+  //}
   else if (cmd == "help") {
   printHelp();
   }
@@ -161,7 +162,7 @@ void setTargetPosition(long position) {
   targetPosition = position;
   stepper.moveTo(position);
   motionComplete = false;
-  ultraSlowMode = false; // Exit ultra-slow mode if active
+  //ultraSlowMode = false; // Exit ultra-slow mode if active
   Serial.print("Moving to position: ");
 Serial.println(position);
 }
@@ -186,7 +187,7 @@ void emergencyStop() {
   stepper.stop();
   stepper.disableOutputs();
   motorEnabled = false;
-  ultraSlowMode = false;
+  //ultraSlowMode = false;
   Serial.println("EMERGENCY STOP - Motor disabled");
 }
 
@@ -214,7 +215,7 @@ void printStatus() {
   Serial.print("Motor Enabled: ");
   Serial.println(motorEnabled ? "Yes" : "No");
   Serial.print("Mode: ");
-  Serial.println(ultraSlowMode ? "Ultra-slow" : "Normal");
+  //Serial.println(ultraSlowMode ? "Ultra-slow" : "Normal");
   Serial.println("-------------");
 }
 
@@ -230,4 +231,5 @@ void printHelp() {
   Serial.println("  ultra [steps] [interval_ms] [dir] - Ultra-slow mode");
   Serial.println("  help             - Show this help");
 }
-}
+
+
