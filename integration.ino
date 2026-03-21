@@ -37,11 +37,16 @@ void printHelp();
 void setup() {
   Serial.begin(9600);
 
+  // Configure step and direction pins (required for AccelStepper)
+  pinMode(6, OUTPUT);   // PUL Pin
+  pinMode(5, OUTPUT);   // DIR Pin
+  pinMode(ENABLE_PIN, OUTPUT);
+
   // Initialize stepper
   stepper.setEnablePin(ENABLE_PIN);
   stepper.enableOutputs();
 
-  // Initialize stepper
+  // Set default motion parameters
   stepper.setMaxSpeed(currentSpeed);
   stepper.setAcceleration(currentAcceleration);
 
@@ -53,6 +58,8 @@ void setup() {
   Serial.println("Stepper Motor Control System Ready");
   Serial.println("Type 'help' for available commands");
   printHelp();
+
+  printStatus();
 }
 
 void loop() {
@@ -194,17 +201,21 @@ void setSpeed(int speed) {
     Serial.print(speed);
     Serial.println(" steps/sec");
   } else {
-    Serial.print("Speed must be between 1 and 4000");
+    Serial.print("Speed must be between 1 and ");
     Serial.println(abs_MAX);
   }
 }
 
 void setAcceleration(int acceleration) {
-  currentAcceleration = acceleration;
-  stepper.setAcceleration(acceleration);
-  Serial.print("Acceleration set to: ");
-  Serial.print(acceleration);
-  Serial.println(" steps/sec²");
+  if (acceleration > 0) {
+    currentAcceleration = acceleration;
+    stepper.setAcceleration(acceleration);
+    Serial.print("Acceleration set to: ");
+    Serial.print(acceleration);
+    Serial.println(" steps/sec²");
+  } else {
+    Serial.println("Acceleration must be greater than 0");
+  }
 }
 
 void emergencyStop() {
