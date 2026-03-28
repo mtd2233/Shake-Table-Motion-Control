@@ -64,6 +64,7 @@ void setup() {
   stepper.moveTo(targetPosition);
 
   Serial.println("Stepper Motor Control System Ready");
+  Serial.println("You can combine commands: 'speed ---- accel ---- move ----'");
   Serial.println("Type 'help' for available commands");
   printHelp();
 
@@ -108,19 +109,18 @@ void runNormalMotion() {
 }
 
 void runBackAndForthMotion() {
-  if (!motorEnabled) 
-    return;
+  if (!motorEnabled) return;
 
   stepper.run();
 
   // Check if reach current target
-  if (stepper.distanceToGo() = 0 ) {
-    if (millis()- lastPositionChangeTime >= PAUSE_BETWEEN_MOVE) {
+  if (stepper.distanceToGo() == 0) {
+    if (millis() - lastPositionChangeTime >= PAUSE_BETWEEN_MOVE) {
       // Toggle dir
       if (movingForward) {
         // Reached forward position, now go back
         stepper.moveTo(0);
-        movingForward = true;
+        movingForward = false;
         Serial.println("Reach forward limit - moving back to 0");
       } else {
         // Reached back position, now go forward
@@ -129,6 +129,7 @@ void runBackAndForthMotion() {
         Serial.println("Reach back limit - moving forward");
       }
       lastPositionChangeTime = millis();
+      motionComplete = false;
     }
   }
 }
@@ -157,9 +158,66 @@ void processSerialCommands() {
     Serial.print("Executing: ");
     Serial.println(serialCommand);
 
-    parseCommand(serialCommand);
+    // Parse multiple commands on the same line
+    parseMultipleCommands(serialCommand);
+
     serialCommand = "";
     commandComplete = false;
+  }
+}
+
+// New function to handle multiple commands on one line
+void parseMultipleCommands(String cmdLine) {
+  cmdLine.trim();
+  cmdLine.toLowerCase();
+  
+  // Split the command line by spaces and process each command
+  int lastSpace = 0;
+  int nextSpace = cmdLine.indexOf(' ');
+  
+  while (nextSpace != -1) {
+    String cmd = cmdLine.substring(lastSpace, nextSpace);
+    
+    // Check if this is a command with a parameter
+    if (cmd == "speed" || cmd == "accel" || cmd == "move") {
+      // Find the next token which should be the parameter
+      int paramStart = nextSpace + 1;
+      int paramEnd = cmdLine.indexOf(' ', paramStart);
+      String param;
+      
+      if (paramEnd != -1) {
+        param = cmdLine.substring(paramStart, paramEnd);
+        lastSpace = paramEnd;
+        nextSpace = cmdLine.indexOf(' ', lastSpace + 1);
+      } else {
+        param = cmdLine.substring(paramStart);
+        lastSpace = cmdLine.length();
+        nextSpace = -1;
+      }
+      
+      // Execute the command with its parameter
+      if (cmd == "speed") {
+        setSpeed(param.toInt());
+      } else if (cmd == "accel") {
+        setAcceleration(param.toInt());
+      } else if (cmd == "move") {
+        setTargetPosition(param.toInt());
+      }
+    } 
+    else {
+      // This is a command without parameters
+      parseCommand(cmd);
+      lastSpace = nextSpace + 1;
+      nextSpace = cmdLine.indexOf(' ', lastSpace);
+    }
+  }
+  
+  // Handle the last command if there's no trailing space
+  if (lastSpace < cmdLine.length()) {
+    String lastCmd = cmdLine.substring(lastSpace);
+    if (lastCmd.length() > 0) {
+      parseCommand(lastCmd);
+    }
   }
 }
 
@@ -284,15 +342,19 @@ void startBackAndForth() {
   backAndForthEnabled = true;
   movingForward = true;
   lastPositionChangeTime = millis();
-  
+  stepper.moveTo(targetPosition);
+
   // Start moving to target position
   stepper.moveTo(targetPosition);
   motionComplete = false;
   
-  Serial.println("Back-and-forth motion enabled");
-  Serial.print("Moving between 0 and ");
+  Serial.println("========================================");
+  Serial.println("Back-and-forth motion ENABLED");
+  Serial.print("Moving continuously between 0 and ");
   Serial.print(targetPosition);
   Serial.println(" steps");
+  Serial.println("Use 'stopbackandforth' or 'stopbaf' to stop");
+  Serial.println("========================================");
 }
 
 void stopBackAndForth() {
@@ -303,9 +365,11 @@ void stopBackAndForth() {
   backAndForthEnabled = false;
   stepper.stop();
   
-  Serial.println("Back-and-forth motion stopped");
+  Serial.println("========================================");
+  Serial.println("Back-and-forth motion STOPPED");
   Serial.print("Stopped at position: ");
   Serial.println(stepper.currentPosition());
+  Serial.println("========================================");
 }
 
 void emergencyStop() {
@@ -371,4 +435,6 @@ void printHelp() {
   Serial.println("  disable          - Disable motor");
   Serial.println("  ultra [steps] [interval_ms] [dir] - Ultra-slow mode");
   Serial.println("  help             - Show this help");
+  Serial.println();
+  Serial.println("You can combine commands: speed 2000 accel 800 move 3200");
 }
