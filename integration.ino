@@ -7,12 +7,18 @@ AccelStepper stepper(1, 6, 5);
 #define ENABLE_PIN 7
 
 // Motion control variables
-long  targetPosition = 0;
-float currentSpeed = 1000;
+long  targetPosition = 3200;
+float currentSpeed = 2000;
 float currentAcceleration = 800;
 const float abs_MAX = 4000;
 bool motorEnabled = true;
 bool motionComplete = false;
+
+// For back-and-forth motion
+bool movingForward = true;
+bool backAndForthEnabled = false;
+unsigned long lastPositionChangeTime = 0;
+const unsigned long PAUSE_BETWEEN_MOVE = 1000; // 1sec pause at each end
 
 // For serial command processing
 String serialCommand = "";
@@ -22,14 +28,13 @@ bool commandComplete = false;
 void processSerialCommands();
 void parseCommand(String cmd);
 void runNormalMotion();
-// void runUltraSlowMotion();
-// void parseUltraSlowCommand(String cmd);
+void runBackAndForthMotion();
 void setTargetPosition(long position);
 void setSpeed(int speed);
 void setAcceleration(int acceleration);
-// void setupUltraSlowMotion(long steps, unsigned long intervalMs, int direction);
 void emergencyStop();
-
+void startBackAndForth();
+void stopBackAndForth();
 void checkLimitSwitches();
 void printStatus();
 void printHelp();
@@ -55,6 +60,9 @@ void setup() {
   // pinMode(EMERGENCY_STOP_PIN, INPUT_PULLUP);
   // pinMode(HOME_SENSOR_PIN, INPUT_PULLUP);
 
+  // Set initial target position
+  stepper.moveTo(targetPosition);
+
   Serial.println("Stepper Motor Control System Ready");
   Serial.println("Type 'help' for available commands");
   printHelp();
@@ -67,11 +75,16 @@ void loop() {
   processSerialCommands();
 
   // Different Motion Modes
-  runNormalMotion();
+  // Run appropriate motion mode
+  if (backAndForthEnabled) {
+    runBackAndForthMotion();
+  } else {
+    runNormalMotion();
+  }
 
   // Provide periodic status updates (every 5 seconds)
   static unsigned long lastStatusTime = 0;
-  if (millis() - lastStatusTime > 5000) {
+  if (millis() - lastStatusTime > 500000) {
     printStatus();
     lastStatusTime = millis();
   }
@@ -90,6 +103,32 @@ void runNormalMotion() {
         motionComplete = true;
         Serial.println("Target position reached");
         printStatus(); // Shows final position
+    }
+  }
+}
+
+void runBackAndForthMotion() {
+  if (!motorEnabled) 
+    return;
+
+  stepper.run();
+
+  // Check if reach current target
+  if (stepper.distanceToGo() = 0 ) {
+    if (millis()- lastPositionChangeTime >= PAUSE_BETWEEN_MOVE) {
+      // Toggle dir
+      if (movingForward) {
+        // Reached forward position, now go back
+        stepper.moveTo(0);
+        movingForward = true;
+        Serial.println("Reach forward limit - moving back to 0");
+      } else {
+        // Reached back position, now go forward
+        stepper.moveTo(targetPosition);
+        movingForward = true;
+        Serial.println("Reach back limit - moving forward");
+      }
+      lastPositionChangeTime = millis();
     }
   }
 }
@@ -145,6 +184,12 @@ void parseCommand(String cmd) {
     int acc = cmd.substring(6).toInt();
     setAcceleration(acc);
   }
+    else if (cmd == "backandforth" || cmd == "baf") {
+    startBackAndForth();
+  }
+  else if (cmd == "stopbackandforth" || cmd == "stopbaf") {
+    stopBackAndForth();
+  }
   else if (cmd == "stop") {
     emergencyStop();
   }
@@ -175,6 +220,11 @@ void parseCommand(String cmd) {
 }
 
 void setTargetPosition(long position) {
+  // Stop back-and-forth mode if it's running
+  if (backAndForthEnabled) {
+    stopBackAndForth();
+  }
+
   // Re-enable motor if it was disabled
   if (!motorEnabled) {
     motorEnabled = true;
@@ -218,7 +268,52 @@ void setAcceleration(int acceleration) {
   }
 }
 
+void startBackAndForth() {
+  if (backAndForthEnabled) {
+    Serial.println("Back-and-forth motion already running");
+    return;
+  }
+  
+  // Re-enable motor if it was disabled
+  if (!motorEnabled) {
+    motorEnabled = true;
+    stepper.enableOutputs();
+    Serial.println("Auto-enabling motor for back-and-forth motion");
+  }
+  
+  backAndForthEnabled = true;
+  movingForward = true;
+  lastPositionChangeTime = millis();
+  
+  // Start moving to target position
+  stepper.moveTo(targetPosition);
+  motionComplete = false;
+  
+  Serial.println("Back-and-forth motion enabled");
+  Serial.print("Moving between 0 and ");
+  Serial.print(targetPosition);
+  Serial.println(" steps");
+}
+
+void stopBackAndForth() {
+  if (!backAndForthEnabled) {
+    return;
+  }
+  
+  backAndForthEnabled = false;
+  stepper.stop();
+  
+  Serial.println("Back-and-forth motion stopped");
+  Serial.print("Stopped at position: ");
+  Serial.println(stepper.currentPosition());
+}
+
 void emergencyStop() {
+  // Stop back-and-forth mode
+  if (backAndForthEnabled) {
+    stopBackAndForth();
+  }
+
   stepper.stop();           // Stop motion immediately
   stepper.disableOutputs(); // Disable motor power
   motorEnabled = false;     // Prevent further movement until enabled
@@ -258,6 +353,8 @@ void printStatus() {
   Serial.println(motorEnabled ? "Yes" : "No");
   Serial.print("Motion Complete: ");
   Serial.println(motionComplete ? "Yes" : "No");
+  Serial.print("Back-and-Forth Mode: ");
+  Serial.println(backAndForthEnabled ? "Enabled" : "Disabled");
   Serial.println("-------------");
 }
 
@@ -266,6 +363,8 @@ void printHelp() {
   Serial.println("  move [steps]     - Move to absolute position");
   Serial.println("  speed [steps/s]  - Set maximum speed");
   Serial.println("  accel [steps/s²] - Set acceleration");
+  Serial.println("  backandforth (baf)  - Start back-and-forth motion between 0 and target");
+  Serial.println("  stopbackandforth    - Stop back-and-forth motion");
   Serial.println("  stop             - Emergency stop");
   Serial.println("  home             - Run homing sequence");
   Serial.println("  enable           - Enable motor");
