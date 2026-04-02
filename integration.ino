@@ -85,7 +85,7 @@ void loop() {
 
   // Provide periodic status updates (every 5 seconds)
   static unsigned long lastStatusTime = 0;
-  if (millis() - lastStatusTime > 500000) {
+  if (millis() - lastStatusTime > 500) {
     printStatus();
     lastStatusTime = millis();
   }
@@ -139,15 +139,20 @@ void processSerialCommands() {
     char inChar = (char)Serial.read();
 
     // Handle both \n and \r\n from serial monitor
-    if (inChar == '\n') {
+    if (inChar == '\n' || inChar == '\r') {
       if (serialCommand.length() > 0) {
-        commandComplete = true;
+    commandComplete = true;
+        }
       }
-    }
-    else if (inChar == '\r') {
+//    if (inChar == '\n') {
+//      if (serialCommand.length() > 0) {
+//        commandComplete = true;
+//      }
+//    }
+//    else if (inChar == '\r') {
       // Ignore carriage return, wait for newline
-      continue;
-    }
+//      continue;
+//    }
     else {
       serialCommand += inChar;
     }
@@ -158,66 +163,9 @@ void processSerialCommands() {
     Serial.print("Executing: ");
     Serial.println(serialCommand);
 
-    // Parse multiple commands on the same line
-    parseMultipleCommands(serialCommand);
 
     serialCommand = "";
     commandComplete = false;
-  }
-}
-
-// New function to handle multiple commands on one line
-void parseMultipleCommands(String cmdLine) {
-  cmdLine.trim();
-  cmdLine.toLowerCase();
-  
-  // Split the command line by spaces and process each command
-  int lastSpace = 0;
-  int nextSpace = cmdLine.indexOf(' ');
-  
-  while (nextSpace != -1) {
-    String cmd = cmdLine.substring(lastSpace, nextSpace);
-    
-    // Check if this is a command with a parameter
-    if (cmd == "speed" || cmd == "accel" || cmd == "move") {
-      // Find the next token which should be the parameter
-      int paramStart = nextSpace + 1;
-      int paramEnd = cmdLine.indexOf(' ', paramStart);
-      String param;
-      
-      if (paramEnd != -1) {
-        param = cmdLine.substring(paramStart, paramEnd);
-        lastSpace = paramEnd;
-        nextSpace = cmdLine.indexOf(' ', lastSpace + 1);
-      } else {
-        param = cmdLine.substring(paramStart);
-        lastSpace = cmdLine.length();
-        nextSpace = -1;
-      }
-      
-      // Execute the command with its parameter
-      if (cmd == "speed") {
-        setSpeed(param.toInt());
-      } else if (cmd == "accel") {
-        setAcceleration(param.toInt());
-      } else if (cmd == "move") {
-        setTargetPosition(param.toInt());
-      }
-    } 
-    else {
-      // This is a command without parameters
-      parseCommand(cmd);
-      lastSpace = nextSpace + 1;
-      nextSpace = cmdLine.indexOf(' ', lastSpace);
-    }
-  }
-  
-  // Handle the last command if there's no trailing space
-  if (lastSpace < cmdLine.length()) {
-    String lastCmd = cmdLine.substring(lastSpace);
-    if (lastCmd.length() > 0) {
-      parseCommand(lastCmd);
-    }
   }
 }
 
